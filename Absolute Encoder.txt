@@ -9,6 +9,8 @@
 
 Ribbon wires: Green - digital input, White - Clock, Purple -Digital Output, Red - VCC, Black - GND, Yellow - Chip Select
 Ribbon wires are connected to the wires of the connection to the encoder. Color code is NOT for connection wires, only for ribbon wires!
+Range of encoder is 0 to 1024 (10 bits)
+Range of scooter steering is 406 to 548
 
 Arduino code (from https://github.com/heavydetail/EMS22A_Arduino/blob/master/EMS22A_Reading/EMS22A_Reading.ino):
 const int PIN_CS = 5;  //chip select
