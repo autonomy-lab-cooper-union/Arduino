@@ -9,6 +9,7 @@
 
 ros::NodeHandle  nh;
 
+//*** Below are the pin configurations for both encoders. A is Green wire, B is White wire, Z is Yellow wire, Red and Black are 5V VCC and GND.
 #define encoder0PinA 2
 #define encoder0PinB 3
 #define encoder0PinZ 18
