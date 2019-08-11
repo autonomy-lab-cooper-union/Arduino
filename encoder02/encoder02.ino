@@ -1,5 +1,6 @@
+
 #include <PID_v1.h>
-//input:velocity from
+//input:velocity from computer sent through ros
 //output:pwm to motor controller
 #include <ros.h>
 #include <Arduino.h>
@@ -48,10 +49,14 @@ void updateVTarget(const std_msgs::Int32 &val) {
 } 
 
 std_msgs::String str_msg;
+int left_encoder;
+int right_encoder;
 
 //"" is the topic name, pc...--name of subscriber
 ros::Subscriber<std_msgs::Int32> pc_vTarget("motor_vTarget", &updateVTarget);
 ros::Publisher pub_vTarget("pub_vTarget", &str_msg);
+ros::Publisher lwheel("lwheel", left_encoder);
+ros::Publisher rwheel("rwheel", right_encoder);
 
 void setup() {
   nh.initNode();  
@@ -87,11 +92,14 @@ void setup() {
 }
 
 void loop() {
-  pulse++;
   Serial.print("Encoder 0: ");
   Serial.println (encoder0Pos, DEC);
   Serial.print("Encoder 1: ");
   Serial.println (encoder1Pos, DEC);
+  left_encoder = encoder0Pos;
+  right_encoder = encoder1Pos;
+  lwheel.publish(&left_encoder);
+  rwheel.publish(&right_encoder);
   if (pulse0 % 1000 == 0)
   {
     nh.spinOnce();

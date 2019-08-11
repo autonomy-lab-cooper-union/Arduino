@@ -1,10 +1,15 @@
 #include <PID_v1.h>
+#include <ros.h>
+#include <Arduino.h>
+#include <std_msgs/Int32.h>
+
 #define PWM 3
 #define DIR 4
 
 //Define Variables w
 //e'll be connecting to
 double Setpoint, Input, Output;
+int temp //temporary storage used for datatype conversion
 
 const int PIN_CS = 8;  //chip  select
 const int PIN_CLOCK = 6;  //clock
@@ -13,6 +18,16 @@ const int PIN_DATA = 7;  //digital output from encoder
 //Specify the links and initial tuning parameters
 double Kp=3, Ki=0.3, Kd=0;
 PID myPID(&Input, &Output, &Setpoint, Kp, Ki, Kd, DIRECT);
+
+//update target setpoint
+void updateTarget(std_msgs::Int32 &val)
+{
+  temp = val.data
+  Setpoint = double(temp);
+}
+
+ros::Subscriber<std_msgs::Int32> theta_target("motor_vTarget", &updateTarget);
+
 
 void setup() {
   Serial.begin(9600);
@@ -91,4 +106,3 @@ void updateMotor(int pwm) {
   }
   analogWrite(PWM, abs(pwm));
 }
-
