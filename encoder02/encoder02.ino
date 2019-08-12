@@ -20,7 +20,7 @@ ros::NodeHandle  nh;
 #define TOTAL_TICK 6800
 #define MOTORL 9
 
-#define KP 10
+#define KP 3
 #define KI 0
 #define KD 0
 
@@ -54,7 +54,6 @@ int right_encoder;
 
 //"" is the topic name, pc...--name of subscriber
 ros::Subscriber<std_msgs::Int32> pc_vTarget("motor_vTarget", &updateVTarget);
-ros::Publisher pub_vTarget("pub_vTarget", &str_msg);
 ros::Publisher lwheel("lwheel", left_encoder);
 ros::Publisher rwheel("rwheel", right_encoder);
 
