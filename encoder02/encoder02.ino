@@ -4,9 +4,8 @@
 //output:pwm to motor controller
 #include <ros.h>
 #include <Arduino.h>
+#include <std_msgs/Float64.h>
 #include <std_msgs/Int32.h>
-#include <std_msgs/Int8.h>
-#include <std_msgs/String.h>
 
 ros::NodeHandle  nh;
 
@@ -17,50 +16,97 @@ ros::NodeHandle  nh;
 #define encoder1PinA 19
 #define encoder1PinB 20
 #define encoder1PinZ 21
-#define TOTAL_TICK 6800
-#define MOTORL 9
+//*** Pin configurations for the motor controllers. Accel means rear motor controller, Direc means front motor controller
+#define accelPWM 9
+#define accelDIR 8
+#define direcPWM 6
+#define direcDIR 7
 
-#define KP 3
-#define KI 0
-#define KD 0
+//*** Parameters for Acceleration PID
+#define kpA 3
+#define kiA 0
+#define kdA 0
+
+//*** Parameters for Direction PID
+#define kpD 3
+#define kiD 0.3
+#define kdD 0
 
 //output conencts to potentiometer of the motor controller's arduino?
 
-int temp; // for temporal datatype conversion
-double vCurrent, pwm, vTarget;
 
-unsigned volatile short pulse0;
-unsigned volatile short pulse1;
+double vCurrent, vTarget; //current and target speed variables
+double target_angle; // targe
+int accelpwm; //variable for pwm value for acceleration
+int direcpwm; //variable for pwn value for direction
 
-PID myPID (&vCurrent, &pwm, &vTarget, KP, KI, KD, DIRECT);
+//unsigned volatile short pulse0;
+//unsigned volatile short pulse1;
+
+PID accelPID (&vCurrent, &accelpwm, &vTarget, kpA, kiA, kdA, DIRECT);
+PID direcPID (&front_angle, &direcpwm, &target_angle, kpD, kiD, kdD, DIRECT);
 
 volatile int encoder0Pos = 0;
-int encoder0; //encoder0Pos before for testing CCW OR CW
-int encoder0_b; //mark the encoder0Pos when pulses change
+//int encoder0; //encoder0Pos before for testing CCW OR CW
+//int encoder0_b; //mark the encoder0Pos when pulses change
 
 volatile int encoder1Pos = 0;
-int encoder1; //encoder1Pos before for testing CCW OR CW
-int encoder1_b; //mark the encoder0Pos when pulse changes (this means that a revolution for the rear wheel has passed)
+//int encoder1; //encoder1Pos before for testing CCW OR CW
+//int encoder1_b; //mark the encoder0Pos when pulse changes (this means that a revolution for the rear wheel has passed)
 
-//fetch target velocity from ROS
-void updateVTarget(const std_msgs::Int32 &val) {
-  temp = val.data;
-  vTarget = (double)temp;  
-} 
 
-std_msgs::String str_msg;
+//std_msgs::String str_msg;
 int left_encoder;
 int right_encoder;
+double left_speed;
+double right_speed;
+double front_angle;
+
+
+//fetch current left wheel speed from ROS
+void currentSpeed_left(const std_msgs::Float64 &val) {
+  left_speed = val.data;
+} 
+
+//fetch current right wheel speed from ROS
+void currentSpeed_right(const std_msgs::Float64 &val) {
+  right_speed = val.data;
+}
+
+//fetch current RAW data from absolute encoder from ROS and convert it to radians
+void currentRadian_front(const std_msgs::Int32 &val) {
+  front_angle = ((double)val.data)*2*pi/1024;
+}
+
+void targetSpeed(const std_msgs::Float64 &val) {
+  vTarget = val.data;
+}
+
+void targetRadian(const std_msgs::Float64 &val) {
+  target_angle = val.data;
+}
+
 
 //"" is the topic name, pc...--name of subscriber
-ros::Subscriber<std_msgs::Int32> pc_vTarget("motor_vTarget", &updateVTarget);
-ros::Publisher lwheel("lwheel", left_encoder);
-ros::Publisher rwheel("rwheel", right_encoder);
+//ros::Subscriber<std_msgs::Int32> pc_vTarget("motor_vTarget", &updateVTarget);
+ros::Publisher lwheel_tick("lwheel", left_encoder);
+ros::Publisher rwheel_tick("rwheel", right_encoder);
+ros::Subscriber<std_msgs::Float64> lwheel_speed("lwheel_speed", &currentSpeed_left);  //current left wheel speed calculated by computer
+ros::Subscriber<std_msgs::Float64> rwheel_speed("rwheel_speed", &currentSpeed_right);  //current right wheel speed calculated by computer
+ros::Subscriber<std_msgs::Int32> fwheel_tick("fwheel_tick", &currentRadian_front); //current RAW data from absolute encoder in front
+ros::Subscriber<std_msgs::Float64> control_speed("control_speed", &targetSpeed); //target speed from computer
+ros::Subscriber<std_msgs::Float64> control_steering("control_steering", &targetRadian); //target radians from computer
 
 void setup() {
   nh.initNode();  
-  nh.subscribe(pc_vTarget);
-  nh.advertise(pub_vTarget);
+  nh.subscribe(lwheel_speed);
+  nh.subscribe(rhweel_speed);
+  nh.subscribe(fwheel_tick);
+  nh.advertise(lwheel_tick);
+  nh.advertise(rwheel_tick);
+  nh.subscribe(control_speed);
+  nh.subscribe(control_steering);
+  
   
   pinMode(encoder0PinA, INPUT);
   digitalWrite(encoder0PinA, HIGH);       // turn on pull-up resistor
@@ -91,90 +137,73 @@ void setup() {
 }
 
 void loop() {
-  Serial.print("Encoder 0: ");
-  Serial.println (encoder0Pos, DEC);
-  Serial.print("Encoder 1: ");
-  Serial.println (encoder1Pos, DEC);
   left_encoder = encoder0Pos;
   right_encoder = encoder1Pos;
   lwheel.publish(&left_encoder);
   rwheel.publish(&right_encoder);
-  if (pulse0 % 1000 == 0)
-  {
-    nh.spinOnce();
-    updateSpeed();
-    encoder0_b = encoder0Pos;
-    encoder1_b = encoder1Pos;
-  }
-
-  //I commented this part out because it's redudant--two updateSpeed function calls at almost the same time. Instead just use the pulse for encoder0
-  /*if (pulse1 % 1000 == 0)
-  {
-    nh.spinOnce();
-    updateSpeed();
-    encoder1_b = encoder1Pos;
-  }*/
+  vCurrent = (left_speed + right_speed) / 2;
+  updateVelocity();
 }
 
 void doEncoderA(bool encoderNum) {
   if (encoderNum == 0)
   { 
     encoder0 = encoder0Pos;
-    if (digitalRead(encoder0PinA) == HIGH){
+  /*  if (digitalRead(encoder0PinA) == HIGH){  //Commented out because we no longer need to reset the pulse, computer takes care of speed calc
       pulse0++;
-    }
+    } */
     if (digitalRead(encoder0PinA) == digitalRead(encoder0PinB)){
       encoder0Pos--;
     }
     else { 
       encoder0Pos++;
     }
-    if (abs(encoder0) > abs(encoder0Pos)){
+/*    if (abs(encoder0) > abs(encoder0Pos)){  //Commented out because we no longer need to reset the pulse, computer takes care of speed calc
       pulse0 = 0;
-    }
+    }*/
   }
   else
   {
     encoder1 = encoder1Pos;
-    if (digitalRead(encoder1PinA) == HIGH){
+    /*if (digitalRead(encoder1PinA) == HIGH){  //Commented out because we no longer need to reset the pulse, computer takes care of speed calc
       pulse1++;
-    }
+    } */
     if (digitalRead(encoder1PinA) == digitalRead(encoder1PinB)){
       encoder1Pos--;
     }
     else { 
       encoder1Pos++;
     }
-    if (abs(encoder1) > abs(encoder1Pos)){
+   /* if (abs(encoder1) > abs(encoder1Pos)){  //Commented out because we no longer need to reset the pulse, computer takes care of speed calc
       pulse1 = 0;
-    }
+    } */
   }
 }
 
 void doEncoderB(bool encoderNum) {
   if (encoderNum == 0){
-    encoder0 = encoder0Pos;
+   // encoder0 = encoder0Pos;
     if (digitalRead(encoder0PinA) == digitalRead(encoder0PinB)){
-      encoderPos++;
+      encoder0Pos++;
     }
     else {
       encoder0Pos--;
     }
-    if (abs(encoder0) > abs(encoder0Pos)){
+   /* if (abs(encoder0) > abs(encoder0Pos)){  //Commented out because we no longer need to reset the pulse, computer takes care of speed calc
       pulse0 = 0;
-    }  
+    }  */
   }
-  else{
-    encoder1 = encoder1Pos;
+  else {
+   // encoder1 = encoder1Pos;
     if (digitalRead(encoder1PinA) == digitalRead(encoder1PinB)){
-      encoderPos++;
+      encoder1Pos++;
     }
     else {
       encoder1Pos--;
     }
-    if (abs(encoder1) > abs(encoder1Pos)){
+   /* if (abs(encoder1) > abs(encoder1Pos)){  //Commented out because we no longer need to reset the pulse, computer takes care of speed calc
       pulse1 = 0;
-    }  
+    }  */
   }
 
 }
@@ -188,38 +217,41 @@ void doEncoderC(bool encoderNum) {
   }
 }
 
-/*void doEncoder() {
-  
-  encoder0 = encoder0Pos;
-  if (digitalRead(encoder0PinZ)==1) {
-    encoder0Pos=0;
-  }else if (digitalRead(encoder0PinA) == digitalRead(encoder0PinB)){
-    encoder0Pos++;
-  }else {
-    encoder0Pos--;
-  } 
-  
-  if (abs(encoder0)>abs(encoder0Pos)){
-    pulse=0;
-  }
-}*/
 
-void updateSpeed(){
+
+void updateVelocity(){
   
-    vCurrent = ((encoder0Pos-encoder0_b)+(encoder1Pos - encoder1_b)/2*TOTAL_TICK)*1000; //rps, add the two velocities and divide them by 2 (average)
-    myPID.Compute();
-    //Serial.println(pwm, DEC);
-    analogWrite(MOTORL, pwm);
+    accelPID.Compute();
+    direcPID.Compute();
+    updateAccel(accelpwm, direcpwm);
+   /* Seril.println(pwm, DEC);
+    analogWrite(PWM, pwm);
     String str_pwm = String(pwm);
     int str_pwm_length = str_pwm.length() + 1;
     char pwm_str_array[str_pwm_length];
     str_pwm.toCharArray(pwm_str_array, str_pwm_length);
     str_msg.data = pwm_str_array;
-    pub_vTarget.publish(&str_msg);
+    pub_vTarget.publish(&str_msg); */
 }
 
-
-
-/*
-  You also need to move the other encoder wire over to pin 3 (interrupt 1).
-*/
+//Remember to check whether the directions are correct
+void updateAccel(int accelpwm, int direcpwm) {
+  if(accelpwm <= 0) {
+    digitalWrite(accelDIR, HIGH);
+  }
+  else {
+    digitalWrite(accelDIR, LOW);
+  }
+  
+  if(direcpwm <= 0) {
+    digitalWrite(direcDIR, HIGH);
+  }
+  else {
+    digitalWrite(direcDIR, LOW);
+  }
+  
+  analogWrite(accelPWM, abs(accelpwm));
+  
+  analogWrite(direcPWM, abs(direcpwm));
+  
+}

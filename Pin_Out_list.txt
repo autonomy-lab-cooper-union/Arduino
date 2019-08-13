@@ -28,3 +28,10 @@ Arduino Uno pin 6 outputs the clocking signal that triggers the Digital Output p
 corresponds to 10 bits of data, plus another 6 bits for checking purposes.
 Arduino Uno pin 8 outputs a pulse signal to enable the absolute encoder to output a new reading every byte.
 
+For the front Motor Controller:
+PWM pin goes to Pin 6 on the Arduino Mega
+DIR pin goes the Pin 7 on the Arduino Mega
+
+For the rear Motor Controller:
+PWN pin goes to Pin 9 on the Arduino Mega
+DIR pin foes the PIn 8 on the Arduino Mega
