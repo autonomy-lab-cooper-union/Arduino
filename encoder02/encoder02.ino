@@ -139,8 +139,8 @@ void setup() {
 void loop() {
   left_encoder = encoder0Pos;
   right_encoder = encoder1Pos;
-  lwheel.publish(&left_encoder);
-  rwheel.publish(&right_encoder);
+  lwheel_tick.publish(&left_encoder);
+  rwheel_tick.publish(&right_encoder);
   vCurrent = (left_speed + right_speed) / 2;
   updateVelocity();
 }
