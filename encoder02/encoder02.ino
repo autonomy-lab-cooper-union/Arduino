@@ -36,9 +36,9 @@ ros::NodeHandle  nh;
 
 
 double vCurrent, vTarget; //current and target speed variables
-double target_angle; // targe
-int accelpwm; //variable for pwm value for acceleration
-int direcpwm; //variable for pwn value for direction
+double target_angle, front_angle; // targe
+double accelpwm; //variable for pwm value for acceleration
+double direcpwm; //variable for pwn value for direction
 
 //unsigned volatile short pulse0;
 //unsigned volatile short pulse1;
@@ -60,7 +60,6 @@ int left_encoder;
 int right_encoder;
 double left_speed;
 double right_speed;
-double front_angle;
 
 
 //fetch current left wheel speed from ROS
@@ -75,7 +74,7 @@ void currentSpeed_right(const std_msgs::Float64 &val) {
 
 //fetch current RAW data from absolute encoder from ROS and convert it to radians
 void currentRadian_front(const std_msgs::Int32 &val) {
-  front_angle = ((double)val.data)*2*pi/1024;
+  front_angle = ((double)val.data)*2*PI/1024;
 }
 
 void targetSpeed(const std_msgs::Float64 &val) {
@@ -99,8 +98,8 @@ ros::Subscriber<std_msgs::Float64> control_steering("control_steering", &targetR
 
 void setup() {
   nh.initNode();  
-  nh.subscribe(lwheel_speed);
-  nh.subscribe(rhweel_speed);
+  nh.subscribe("lwheel_speed");
+  nh.subscribe("rhweel_speed");
   nh.subscribe(fwheel_tick);
   nh.advertise(lwheel_tick);
   nh.advertise(rwheel_tick);
@@ -120,8 +119,11 @@ void setup() {
   digitalWrite(encoder1PinB, HIGH);       // turn on pull-up resistor
   pinMode(encoder1PinZ, INPUT);
   digitalWrite(encoder1PinZ, HIGH);       // turn on pull-up resistor
-  pinMode(MOTORL, OUTPUT);
-  
+  pinMode(accelPWM, OUTPUT);
+  pinMode(direcPWM, OUTPUT);
+  pinMode(accelDIR, OUTPUT);
+  pinMode(direcDIR, OUTPUT);
+    
   attachInterrupt(digitalPinToInterrupt(encoder0PinA), doEncoderA(0), CHANGE);  // Output channel A from encoder 0 -> interrupt pin 2
   attachInterrupt(digitalPinToInterrupt(encoder0PinB), doEncoderB(0), CHANGE);  // Output channel B from encoder 0 -> interrupt pin 3
   attachInterrupt(digitalPinToInterrupt(encoder0PinZ), doEncoderC(0), RISING); // Output channel C from encoder 0 -> interrupt pin 18       
