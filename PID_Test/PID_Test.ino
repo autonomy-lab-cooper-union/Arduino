@@ -9,9 +9,9 @@
 //Define Variables w
 //e'll be connecting to
 double Setpoint, Input, Output;
-int temp //temporary storage used for datatype conversion
+int temp; //temporary storage used for datatype conversion
 
-const int PIN_CS = 8;  //chip  select
+const int PIN_CS = 8;  //chip select
 const int PIN_CLOCK = 6;  //clock
 const int PIN_DATA = 7;  //digital output from encoder
 
@@ -22,7 +22,7 @@ PID myPID(&Input, &Output, &Setpoint, Kp, Ki, Kd, DIRECT);
 //update target setpoint
 void updateTarget(std_msgs::Int32 &val)
 {
-  temp = val.data
+  temp = val.data;
   Setpoint = double(temp);
 }
 
@@ -31,8 +31,6 @@ ros::Subscriber<std_msgs::Int32> theta_target("motor_vTarget", &updateTarget);
 
 void setup() {
   Serial.begin(9600);
-
-  Setpoint = 500;
   myPID.SetMode(AUTOMATIC);
   myPID.SetOutputLimits(-255, 255);
 
@@ -48,6 +46,16 @@ void setup() {
 }
 
 void loop() {
+  if (Serial.available() > 0) {
+    double t = Serial.read();
+    
+    if (t > 0) {
+      Serial.print("Setpoint updated ");
+      Serial.print(t);
+      Serial.print("\n");
+      Setpoint = t;
+    }
+  }
   Input = updateEncoder();
   Serial.print(Input);
   Serial.print("\t");

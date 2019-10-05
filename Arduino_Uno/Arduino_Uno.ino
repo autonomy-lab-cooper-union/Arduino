@@ -3,18 +3,23 @@
 #include <std_msgs/Int32.h>
 
 
-#define PIN_CS 8;  //chip  select
-#define PIN_CLOCK = 6;  //clock
-#define PIN_DATA = 7;  //digital output from encoder
+#define PIN_CS 8  //chip  select
+#define PIN_CLOCK 6  //clock
+#define PIN_DATA 7  //digital output from encoder
 
+#define MID_POINT 461
+
+ros::NodeHandle nh;
+
+std_msgs::Int32 tick;
 int encoderPos; //Numbers of ticks from absolute encoder
 
-ros::Publisher fwheel_tick("fwheel_tick", &encoderPos);
+ros::Publisher fwheel_tick("fwheel_tick", &tick);
 
 
 void setup() {
+  nh.initNode();
   nh.advertise(fwheel_tick);
-  Serial.begin(9600);
   pinMode(PIN_CS, OUTPUT);
   pinMode(PIN_CLOCK, OUTPUT);
   pinMode(PIN_DATA, INPUT);
@@ -42,9 +47,14 @@ void loop() {
     digitalWrite(PIN_CLOCK, HIGH);
     delay(1);
   }
-  fwheel_tick.publish(&encoderPos);
   digitalWrite(PIN_CLOCK, LOW);
   delay(1);
   digitalWrite(PIN_CLOCK, HIGH);
   delay(1);
+
+  encoderPos -= MID_POINT;
+  encoderPos = -encoderPos;
+  tick.data = encoderPos;
+  fwheel_tick.publish(&tick);
+  nh.spinOnce();
 }
