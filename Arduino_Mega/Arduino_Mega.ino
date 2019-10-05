@@ -69,6 +69,8 @@ volatile int encoder1Pos = 0;
 //std_msgs::String str_msg;
 std_msgs::Int32 left_encoder;
 std_msgs::Int32 right_encoder;
+std_msgs::Int32 front_pwm;
+std_msgs::Int32 front_target;
 double left_speed;
 double right_speed;
 
@@ -101,6 +103,8 @@ void targetRadian(const std_msgs::Float64 &val) {
 //ros::Subscrirosber<std_msgs::Int32> pc_vTarget("motor_vTarget", &updateVTarget);
 ros::Publisher lwheel_tick("lwheel_tick", &left_encoder);
 ros::Publisher rwheel_tick("rwheel_tick", &right_encoder);
+ros::Publisher fwheel_pwm("fwheel_pwm", &front_pwm);
+ros::Publisher target_tick("target_tick", &front_target);
 ros::Subscriber<std_msgs::Float64> lwheel_speed("lwheel_speed", &currentSpeed_left);  //current left wheel speed calculated by computer
 ros::Subscriber<std_msgs::Float64> rwheel_speed("rwheel_speed", &currentSpeed_right);  //current right wheel speed calculated by computer
 ros::Subscriber<std_msgs::Int32> fwheel_tick("fwheel_tick", &currentRadian_front); //current RAW data from absolute encoder in front
@@ -116,6 +120,8 @@ void setup() {
   nh.subscribe(fwheel_tick);
   nh.advertise(lwheel_tick);
   nh.advertise(rwheel_tick);
+  nh.advertise(fwheel_pwm);
+  nh.advertise(target_tick);
   nh.subscribe(control_speed);
   nh.subscribe(control_steering);
   
@@ -163,6 +169,8 @@ void loop() {
     pub_time = millis();
   }
   vCurrent = (left_speed + right_speed) / 2;
+  front_target.data = target_angle;
+  target_tick.publish(&front_target);
   updateVelocity();
   nh.spinOnce();
 }
@@ -236,6 +244,8 @@ void updateVelocity(){
   
     accelPID.Compute();
     direcPID.Compute();
+    front_pwm.data = direcpwm;
+    fwheel_pwm.publish(&front_pwm);
     updateAccel(accelpwm, direcpwm);
    /* Seril.println(pwm, DEC);
     analogWrite(PWM, pwm);

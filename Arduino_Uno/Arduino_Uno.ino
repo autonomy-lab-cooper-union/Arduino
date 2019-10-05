@@ -7,7 +7,7 @@
 #define PIN_CLOCK 6  //clock
 #define PIN_DATA 7  //digital output from encoder
 
-#define MID_POINT 470
+#define MID_POINT 461
 
 ros::NodeHandle nh;
 
