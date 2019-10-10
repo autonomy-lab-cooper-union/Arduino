@@ -12,7 +12,7 @@
 ros::NodeHandle nh;
 
 std_msgs::Int32 tick;
-int encoderPos; //Numbers of ticks from absolute encoder
+int absencoderPos; //Numbers of ticks from absolute encoder
 
 ros::Publisher fwheel_tick("fwheel_tick", &tick);
 
@@ -28,7 +28,7 @@ void setup() {
 }
 
 void loop() {
-  encoderPos = 0;
+  absencoderPos = 0;
   digitalWrite(PIN_CS, HIGH);
   digitalWrite(PIN_CS, LOW);
   for (int i=0; i<10; i++) {
@@ -37,9 +37,9 @@ void loop() {
     digitalWrite(PIN_CLOCK, HIGH);
     delay(1);
 
-    encoderPos = encoderPos | digitalRead(PIN_DATA);
+    absencoderPos = absencoderPos | digitalRead(PIN_DATA);
 
-    if(i < 9) encoderPos = encoderPos << 1;
+    if(i < 9) absencoderPos = absencoderPos << 1;
   }
   for (int i=0; i<6; i++) {
     digitalWrite(PIN_CLOCK, LOW);
@@ -52,9 +52,9 @@ void loop() {
   digitalWrite(PIN_CLOCK, HIGH);
   delay(1);
 
-  encoderPos -= MID_POINT;
-  encoderPos = -encoderPos;
-  tick.data = encoderPos;
+  absencoderPos -= MID_POINT;
+  absencoderPos = -absencoderPos;
+  tick.data = absencoderPos;
   fwheel_tick.publish(&tick);
   nh.spinOnce();
 }

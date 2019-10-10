@@ -11,6 +11,13 @@
 
 ros::NodeHandle  nh;
 
+
+//*** Below are important pin configurations and constant values for absolute encoder
+#define PIN_CS 24  //chip  select
+#define PIN_CLOCK 26  //clock
+#define PIN_DATA 28  //digital output from encoder
+#define MID_POINT 461
+
 //*** Below are the pin configurations for both encoders. A is Green wire, B is White wire, Z is Yellow wire, Red and Black are 5V VCC and GND.
 #define encoder0PinA 2
 #define encoder0PinB 3
@@ -71,6 +78,8 @@ std_msgs::Int32 left_encoder;
 std_msgs::Int32 right_encoder;
 std_msgs::Int32 front_pwm;
 std_msgs::Int32 front_target;
+std_msgs::Int32 tick;
+int absencoderPos; //Numbers of ticks from absolute encoder
 double left_speed;
 double right_speed;
 
@@ -105,6 +114,7 @@ ros::Publisher lwheel_tick("lwheel_tick", &left_encoder);
 ros::Publisher rwheel_tick("rwheel_tick", &right_encoder);
 ros::Publisher fwheel_pwm("fwheel_pwm", &front_pwm);
 ros::Publisher target_tick("target_tick", &front_target);
+ros::Publisher fwheel_tick("fwheel_tick", &tick);
 ros::Subscriber<std_msgs::Float64> lwheel_speed("lwheel_speed", &currentSpeed_left);  //current left wheel speed calculated by computer
 ros::Subscriber<std_msgs::Float64> rwheel_speed("rwheel_speed", &currentSpeed_right);  //current right wheel speed calculated by computer
 ros::Subscriber<std_msgs::Int32> fwheel_tick("fwheel_tick", &currentRadian_front); //current RAW data from absolute encoder in front
@@ -122,6 +132,7 @@ void setup() {
   nh.advertise(rwheel_tick);
   nh.advertise(fwheel_pwm);
   nh.advertise(target_tick);
+  nh.advertise(fwheel_tick);
   nh.subscribe(control_speed);
   nh.subscribe(control_steering);
   
@@ -138,6 +149,11 @@ void setup() {
   digitalWrite(encoder1PinB, HIGH);       // turn on pull-up resistor
   pinMode(encoder1PinZ, INPUT);
   digitalWrite(encoder1PinZ, HIGH);       // turn on pull-up resistor
+  pinMode(PIN_CS, OUTPUT);
+  pinMode(PIN_CLOCK, OUTPUT);
+  pinMode(PIN_DATA, INPUT);
+  digitalWrite(PIN_CLOCK, HIGH);
+  digitalWrite(PIN_CS, LOW);
   pinMode(accelPWM, OUTPUT);
   pinMode(direcPWM, OUTPUT);
   pinMode(accelDIR, OUTPUT);
@@ -166,6 +182,7 @@ void loop() {
     right_encoder.data = encoder1Pos;
     lwheel_tick.publish(&left_encoder);
     rwheel_tick.publish(&right_encoder);
+    sendTicks();
     pub_time = millis();
   }
   vCurrent = (left_speed + right_speed) / 2;
@@ -173,6 +190,37 @@ void loop() {
   target_tick.publish(&front_target);
   updateVelocity();
   nh.spinOnce();
+}
+
+void sendTicks(){
+  absencoderPos = 0;
+  digitalWrite(PIN_CS, HIGH);
+  digitalWrite(PIN_CS, LOW);
+  for (int i=0; i<10; i++) {
+    digitalWrite(PIN_CLOCK, LOW);
+    delay(1);
+    digitalWrite(PIN_CLOCK, HIGH);
+    delay(1);
+
+    absencoderPos = absencoderPos | digitalRead(PIN_DATA);
+
+    if(i < 9) absencoderPos = absencoderPos << 1;
+  }
+  for (int i=0; i<6; i++) {
+    digitalWrite(PIN_CLOCK, LOW);
+    delay(1);
+    digitalWrite(PIN_CLOCK, HIGH);
+    delay(1);
+  }
+  digitalWrite(PIN_CLOCK, LOW);
+  delay(1);
+  digitalWrite(PIN_CLOCK, HIGH);
+  delay(1);
+
+  absencoderPos -= MID_POINT;
+  absencoderPos = -absencoderPos;
+  tick.data = absencoderPos;
+  fwheel_tick.publish(&tick);
 }
 
 void doEncoder0A() {
