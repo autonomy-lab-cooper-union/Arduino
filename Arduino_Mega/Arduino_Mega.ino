@@ -16,7 +16,7 @@ ros::NodeHandle  nh;
 #define PIN_CS 24  //chip  select
 #define PIN_CLOCK 26  //clock
 #define PIN_DATA 28  //digital output from encoder
-#define MID_POINT 461
+#define MID_POINT 390
 
 //*** Below are the pin configurations for both encoders. A is Green wire, B is White wire, Z is Yellow wire, Red and Black are 5V VCC and GND.
 #define encoder0PinA 2
@@ -95,9 +95,9 @@ void currentSpeed_right(const std_msgs::Float64 &val) {
 }
 
 //fetch current RAW data from absolute encoder from ROS and convert it to radians
-void currentRadian_front(const std_msgs::Int32 &val) {
+/*void currentRadian_front(const std_msgs::Int32 &val) {
   front_angle = (double)val.data;
-}
+}*/
 
 void targetSpeed(const std_msgs::Float64 &val) {
   vTarget = val.data;
@@ -117,7 +117,7 @@ ros::Publisher target_tick("target_tick", &front_target);
 ros::Publisher fwheel_tick("fwheel_tick", &tick);
 ros::Subscriber<std_msgs::Float64> lwheel_speed("lwheel_speed", &currentSpeed_left);  //current left wheel speed calculated by computer
 ros::Subscriber<std_msgs::Float64> rwheel_speed("rwheel_speed", &currentSpeed_right);  //current right wheel speed calculated by computer
-ros::Subscriber<std_msgs::Int32> fwheel_tick("fwheel_tick", &currentRadian_front); //current RAW data from absolute encoder in front
+//ros::Subscriber<std_msgs::Int32> fwheel_tick("fwheel_tick", &currentRadian_front)
 ros::Subscriber<std_msgs::Float64> control_speed("control_speed", &targetSpeed); //target speed from computer
 ros::Subscriber<std_msgs::Float64> control_steering("control_steering", &targetRadian); //target radians from computer
 
@@ -127,7 +127,6 @@ void setup() {
   nh.initNode();  
   nh.subscribe(lwheel_speed);
   nh.subscribe(rwheel_speed);
-  nh.subscribe(fwheel_tick);
   nh.advertise(lwheel_tick);
   nh.advertise(rwheel_tick);
   nh.advertise(fwheel_pwm);
@@ -219,6 +218,7 @@ void sendTicks(){
 
   absencoderPos -= MID_POINT;
   absencoderPos = -absencoderPos;
+  front_angle = absencoderPos;
   tick.data = absencoderPos;
   fwheel_tick.publish(&tick);
 }
