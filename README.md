@@ -34,15 +34,15 @@ All the numbered pins shown above are used for digital interrupts.
 
 Pin 1 on EMS22A (Digital Input) connects to GND
 
-Pin 2 on EMS22A (Clock) connects to pin 6 on Arduino Uno
+Pin 2 on EMS22A (Clock) connects to pin 26 on Arduino Uno
 
 Pin 3 on EMS22A (GND) connects to GND
 
-Pin 4 on EMS22A (Digital Output) connects to pin 7 on Arduino Uno
+Pin 4 on EMS22A (Digital Output) connects to pin 28 on Arduino Uno
 
 Pin 5 on EMS22A (VCC) connects to VCC
 
-Pin 6 on EMS22A (Chip Select) connects to pin 8 on Arduino Uno
+Pin 6 on EMS22A (Chip Select) connects to pin 24 on Arduino Uno
 
 Arduino Uno pin 6 outputs the clocking signal that triggers the Digital Output pin on EMS22A to send out bits of data. One reading
 corresponds to 10 bits of data, plus another 6 bits for checking purposes.
