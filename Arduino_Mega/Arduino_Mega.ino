@@ -1,4 +1,4 @@
-#include <Ethernet.h>
+  #include <Ethernet.h>
 
 
 #include <PID_v1.h>
@@ -16,7 +16,7 @@ ros::NodeHandle  nh;
 #define PIN_CS 24  //chip  select
 #define PIN_CLOCK 26  //clock
 #define PIN_DATA 28  //digital output from encoder
-#define MID_POINT 390
+#define MID_POINT 453
 
 //*** Below are the pin configurations for both encoders. A is Green wire, B is White wire, Z is Yellow wire, Red and Black are 5V VCC and GND.
 #define encoder0PinA 2
@@ -41,14 +41,14 @@ ros::NodeHandle  nh;
 //#define kiD 0.3
 //#define kdD 0
 
-#define kpD 3
-#define kiD 0.4
+#define kpD 1
+#define kiD 0
 #define kdD 0
 
 //*** Midpoint and threshold for steering
-#define STEERING_MID 470
-#define STEERING_MIN 410
-#define STEERING_MAX 530
+#define STEERING_MID 453
+#define STEERING_MIN 380
+#define STEERING_MAX 525
 
 //output conencts to potentiometer of the motor controller's arduino?
 
@@ -74,25 +74,27 @@ volatile int encoder1Pos = 0;
 
 
 //std_msgs::String str_msg;
-std_msgs::Int32 left_encoder;
-std_msgs::Int32 right_encoder;
+std_msgs::Float64 left_encoder;
+std_msgs::Float64 right_encoder;
 std_msgs::Int32 front_pwm;
 std_msgs::Int32 front_target;
 std_msgs::Int32 tick;
+std_msgs::Int32 back_pwm;
 int absencoderPos; //Numbers of ticks from absolute encoder
 double left_speed;
 double right_speed;
+double left_tick, right_tick;
 
 
 //fetch current left wheel speed from ROS
-void currentSpeed_left(const std_msgs::Float64 &val) {
+/*void currentSpeed_left(const std_msgs::Float64 &val) {
   left_speed = val.data;
-} 
+} */
 
 //fetch current right wheel speed from ROS
-void currentSpeed_right(const std_msgs::Float64 &val) {
+/*void currentSpeed_right(const std_msgs::Float64 &val) {
   right_speed = val.data;
-}
+}*/
 
 //fetch current RAW data from absolute encoder from ROS and convert it to radians
 /*void currentRadian_front(const std_msgs::Int32 &val) {
@@ -105,6 +107,14 @@ void targetSpeed(const std_msgs::Float64 &val) {
 
 void targetRadian(const std_msgs::Float64 &val) {
   target_angle = val.data / (2*PI) * 1024;
+  if (target_angle > 72)
+  {
+    target_angle = 72;
+  }
+  else if (target_angle < -72)
+  {
+    target_angle = -72;
+  }
 }
 
 
@@ -113,10 +123,11 @@ void targetRadian(const std_msgs::Float64 &val) {
 ros::Publisher lwheel_tick("lwheel_tick", &left_encoder);
 ros::Publisher rwheel_tick("rwheel_tick", &right_encoder);
 ros::Publisher fwheel_pwm("fwheel_pwm", &front_pwm);
+ros::Publisher bwheel_pwm("bwheel_pwm", &back_pwm);
 ros::Publisher target_tick("target_tick", &front_target);
 ros::Publisher fwheel_tick("fwheel_tick", &tick);
-ros::Subscriber<std_msgs::Float64> lwheel_speed("lwheel_speed", &currentSpeed_left);  //current left wheel speed calculated by computer
-ros::Subscriber<std_msgs::Float64> rwheel_speed("rwheel_speed", &currentSpeed_right);  //current right wheel speed calculated by computer
+//ros::Subscriber<std_msgs::Float64> lwheel_speed("lwheel_speed", &currentSpeed_left);  //current left wheel speed calculated by computer
+//ros::Subscriber<std_msgs::Float64> rwheel_speed("rwheel_speed", &currentSpeed_right);  //current right wheel speed calculated by computer
 //ros::Subscriber<std_msgs::Int32> fwheel_tick("fwheel_tick", &currentRadian_front)
 ros::Subscriber<std_msgs::Float64> control_speed("control_speed", &targetSpeed); //target speed from computer
 ros::Subscriber<std_msgs::Float64> control_steering("control_steering", &targetRadian); //target radians from computer
@@ -125,11 +136,12 @@ unsigned long pub_time;
 
 void setup() {
   nh.initNode();  
-  nh.subscribe(lwheel_speed);
-  nh.subscribe(rwheel_speed);
+  //nh.subscribe(lwheel_speed);
+  //nh.subscribe(rwheel_speed);
   nh.advertise(lwheel_tick);
   nh.advertise(rwheel_tick);
   nh.advertise(fwheel_pwm);
+  nh.advertise(bwheel_pwm);
   nh.advertise(target_tick);
   nh.advertise(fwheel_tick);
   nh.subscribe(control_speed);
@@ -173,16 +185,22 @@ void setup() {
   direcPID.SetOutputLimits(-255, 255);
   
   pub_time = millis();
+  left_tick = 0;
+  right_tick = 0;
 }
 
 void loop() {
   if(millis() - pub_time > 50) {
-    left_encoder.data = -encoder0Pos; // left value needs to be reversed
-    right_encoder.data = encoder1Pos;
+    left_speed = (-encoder0Pos - left_tick)*PI*0.216/(1000*0.05);
+    right_speed = (encoder1Pos - right_tick)*PI*0.216/(1000*0.05);
+    left_encoder.data = left_speed; // left value needs to be reversed
+    right_encoder.data = left_speed;
     lwheel_tick.publish(&left_encoder);
     rwheel_tick.publish(&right_encoder);
     sendTicks();
     pub_time = millis();
+    left_tick = encoder0Pos;
+    right_tick = encoder1Pos;
   }
   vCurrent = (left_speed + right_speed) / 2;
   front_target.data = target_angle;
@@ -294,6 +312,8 @@ void updateVelocity(){
     direcPID.Compute();
     front_pwm.data = direcpwm;
     fwheel_pwm.publish(&front_pwm);
+    back_pwm.data = accelpwm;
+    bwheel_pwm.publish(&back_pwm);
     updateAccel(accelpwm, direcpwm);
    /* Seril.println(pwm, DEC);
     analogWrite(PWM, pwm);
