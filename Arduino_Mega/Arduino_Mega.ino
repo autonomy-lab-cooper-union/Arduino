@@ -13,17 +13,10 @@ ros::NodeHandle  nh;
 
 
 //*** Below are important pin configurations and constant values for absolute encoder
-<<<<<<< HEAD
-#define PIN_CS 24  //chip  select
-#define PIN_CLOCK 26  //clock
-#define PIN_DATA 28  //digital output from encoder
-#define MID_POINT 453
-=======
 #define PIN_CS 24  //chip  select pin
 #define PIN_CLOCK 26  //clock pin
 #define PIN_DATA 28  //digital output pin
 #define MID_POINT 390  // This is the amount of ticks when steering pole is straight ahead. This may change if absolite encoder loosens!! So just rostopic echo fwheel-tick and adjust
->>>>>>> 6237786ec074a59ee983c58bb4aa08df467a8995
 
 //*** Below are the pin configurations for both encoders. A is Green wire, B is White wire, Z is Yellow wire, Red and Black are 5V VCC and GND.
 #define encoder0PinA 2
@@ -44,17 +37,8 @@ ros::NodeHandle  nh;
 #define kdA 0
 
 //*** Parameters for Direction PID
-<<<<<<< HEAD
-//#define kpD 3
-//#define kiD 0.3
-//#define kdD 0
-
-#define kpD 1
-#define kiD 0
-=======
 #define kpD 3
 #define kiD 0.4
->>>>>>> 6237786ec074a59ee983c58bb4aa08df467a8995
 #define kdD 0
 
 //*** Midpoint and threshold for steering
