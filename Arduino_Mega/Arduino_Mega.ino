@@ -13,6 +13,11 @@ ros::NodeHandle nh; //Every Arduino code using rosserial needs this, this is the
 
 
 //*** Below are important pin configurations and constant values for absolute encoder
+// Red to power
+// Black and Green to Ground
+// Purple to 28
+// White to 26
+// Yellow to 24
 #define PIN_CS 24  //chip  select pin
 #define PIN_CLOCK 26  //clock pin
 #define PIN_DATA 28  //digital output pin
